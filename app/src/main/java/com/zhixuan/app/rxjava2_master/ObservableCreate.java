@@ -19,29 +19,33 @@ public class ObservableCreate {
     intervalRange();
   }
 
-  private static void create(){
+  private static void create() {
 
-      Observable.create(new ObservableOnSubscribe<String>() {
-          @Override
-          public void subscribe(ObservableEmitter<String> emitter/* ①*/) throws Exception {
+    Observable.create(
+            new ObservableOnSubscribe<String>() {
+              @Override
+              public void subscribe(ObservableEmitter<String> emitter /* ①*/) throws Exception {}
+            })
+        .subscribe(
+            new BlockingBaseObserver<String>() {
+              @Override
+              public void onNext(String s) {}
 
-          }
-      }).subscribe(new BlockingBaseObserver<String>() {
-          @Override
-          public void onNext(String s) {
+              @Override
+              public void onError(Throwable e) {}
+            });
 
-          }
 
-          @Override
-          public void onError(Throwable e) {
+    // ①将Subscriber改为了ObservableEmitter
+  }
 
-          }
-      });
-
-      //①将Subscriber改为了ObservableEmitter
+  private static void from() {
+    // 在Rxjava2中将所有的from全都拆散了
+    Observable.fromArray(new String[] {}, new Integer[] {}).subscribe();
   }
 
   private static void intervalRange() {
+
     Observable.intervalRange(10, 5, 10, 1, TimeUnit.SECONDS, Schedulers.trampoline())
         .subscribe(
             new Observer<Long>() {
@@ -58,4 +62,5 @@ public class ObservableCreate {
               public void onComplete() {}
             });
   }
+
 }
