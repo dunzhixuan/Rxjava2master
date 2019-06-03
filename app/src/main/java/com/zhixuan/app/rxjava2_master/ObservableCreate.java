@@ -2,12 +2,15 @@ package com.zhixuan.app.rxjava2_master;
 
 import org.reactivestreams.Subscription;
 
+import java.io.Serializable;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.ObservableSource;
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
@@ -19,7 +22,11 @@ import io.reactivex.schedulers.Schedulers;
 public class ObservableCreate {
 
   public static void main(String[] argss) {
-    intervalRange();
+    //    intervalRange();
+    //    defer();
+    //    create2();
+//    just();
+      concat();
   }
 
   private static void create() {
@@ -139,23 +146,24 @@ public class ObservableCreate {
 
     Flowable flowable = Flowable.just("1");
 
-    Disposable disposable4 = flowable.subscribe(
-        new Consumer<String>() { // 相当于onNext
-          @Override
-          public void accept(String s) throws Exception {}
-        },
-        new Consumer<Throwable>() { // 相当于onError
-          @Override
-          public void accept(Throwable throwable) throws Exception {}
-        },
-        new Action() { // 相当于onComplete，注意这里是Action
-          @Override
-          public void run() throws Exception {}
-        },
-        new Consumer<Subscription>() { // 相当于onSubscribe
-          @Override
-          public void accept(Subscription subscription) throws Exception {}
-        });
+    Disposable disposable4 =
+        flowable.subscribe(
+            new Consumer<String>() { // 相当于onNext
+              @Override
+              public void accept(String s) throws Exception {}
+            },
+            new Consumer<Throwable>() { // 相当于onError
+              @Override
+              public void accept(Throwable throwable) throws Exception {}
+            },
+            new Action() { // 相当于onComplete，注意这里是Action
+              @Override
+              public void run() throws Exception {}
+            },
+            new Consumer<Subscription>() { // 相当于onSubscribe
+              @Override
+              public void accept(Subscription subscription) throws Exception {}
+            });
   }
 
   private static void from() {
@@ -166,6 +174,7 @@ public class ObservableCreate {
   private static void intervalRange() {
 
     Observable.intervalRange(10, 5, 10, 1, TimeUnit.SECONDS, Schedulers.trampoline())
+            .take(3)
         .subscribe(
             new Observer<Long>() {
               @Override
@@ -180,5 +189,133 @@ public class ObservableCreate {
               @Override
               public void onComplete() {}
             });
+  }
+
+  private static Integer i = 10;
+
+  private static void defer() {
+
+    // 2. 通过defer 定义被观察者对象
+    // 注：此时被观察者对象还没创建
+    Observable<Integer> observable =
+        Observable.defer(
+            new Callable<ObservableSource<? extends Integer>>() {
+              @Override
+              public ObservableSource<? extends Integer> call() throws Exception {
+                return Observable.just(i);
+              }
+            });
+
+    i = 15;
+
+    // 注：此时，才会调用defer（）创建被观察者对象（Observable）
+    observable.subscribe(
+        new Observer<Integer>() {
+
+          @Override
+          public void onSubscribe(Disposable d) {
+            System.out.println("开始采用subscribe连接");
+          }
+
+          @Override
+          public void onNext(Integer value) {
+            System.out.println("接收到的整数是" + value);
+          }
+
+          @Override
+          public void onError(Throwable e) {
+            System.out.println("对Error事件作出响应");
+          }
+
+          @Override
+          public void onComplete() {
+            System.out.println("对Complete事件作出响应");
+          }
+        });
+  }
+
+  private static void create2() {
+    Observable<Integer> observable =
+        Observable.create(
+            new ObservableOnSubscribe<Integer>() {
+              @Override
+              public void subscribe(ObservableEmitter<Integer> emitter) throws Exception {
+                emitter.onNext(i);
+                emitter.onComplete();
+              }
+            });
+
+    i = 15;
+
+    observable.subscribe(
+        new Observer<Integer>() {
+          @Override
+          public void onSubscribe(Disposable d) {
+            System.out.println("开始采用subscribe连接");
+          }
+
+          @Override
+          public void onNext(Integer integer) {
+            System.out.println("接收到的整数是" + integer);
+          }
+
+          @Override
+          public void onError(Throwable e) {
+            System.out.println("对Error事件作出响应");
+          }
+
+          @Override
+          public void onComplete() {
+            System.out.println("对Complete事件作出响应");
+          }
+        });
+  }
+
+  private static void just() {
+    Observable observable = Observable.just(i);
+
+    i = 15;
+
+    observable.subscribe(
+        new Observer() {
+          @Override
+          public void onSubscribe(Disposable d) {
+            System.out.println("开始采用subscribe连接");
+          }
+
+          @Override
+          public void onNext(Object o) {
+            System.out.println("接收到的整数是" + o);
+          }
+
+          @Override
+          public void onError(Throwable e) {
+            System.out.println("对Error事件作出响应");
+          }
+
+          @Override
+          public void onComplete() {
+            System.out.println("对Complete事件作出响应");
+          }
+        });
+  }
+
+  private static void concat() {
+    Disposable disposable =
+        Observable.concat(Observable.just(1,2,3), Observable.just(5,1,2,6))
+            .subscribe(
+                new Consumer<Integer>() {
+                  @Override
+                  public void accept(Integer integer) throws Exception {
+                    System.out.println(integer);
+                  }
+                });
+
+    Disposable disposable1 = Observable.concat(Observable.just(1,2),Observable.just("!")).subscribe(new Consumer<Serializable>() {
+        @Override
+        public void accept(Serializable serializable) throws Exception {
+
+        }
+    });
   }
 }
