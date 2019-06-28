@@ -1,15 +1,19 @@
 package com.zhixuan.app.rxjava2_master;
 
-import android.support.v7.app.AppCompatActivity;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.DragEvent;
+import android.widget.ImageView;
+import android.widget.Toast;
 
-import org.reactivestreams.Subscriber;
+import com.jakewharton.rxbinding2.view.RxView;
+import com.jakewharton.rxbinding2.view.ViewScrollChangeEvent;
 
-import java.net.MalformedURLException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
@@ -23,14 +27,89 @@ import io.reactivex.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
 
+  private ImageView img;
+  private static final String TAG = "MainActivity";
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+    img = findViewById(R.id.img);
+
+    /* 防抖点击监听*/
+    RxView.clicks(img)
+        .throttleFirst(2, TimeUnit.SECONDS)
+        .subscribe(
+            new Consumer<Object>() {
+              @Override
+              public void accept(Object o) throws Exception {
+                //                Toast.makeText(MainActivity.this, "11111111111",
+                // Toast.LENGTH_LONG).show();
+                Log.e(TAG, "111111111111");
+              }
+            });
+
+    /* 长按监听*/
+    RxView.longClicks(img)
+        .subscribe(
+            new Consumer<Object>() {
+              @Override
+              public void accept(Object o) throws Exception {
+                //                Toast.makeText(MainActivity.this, "2222222222",
+                // Toast.LENGTH_LONG).show();
+                Log.e(TAG, "222222222222");
+              }
+            });
+    //
+    //    /* 绘制监听*/
+    RxView.draws(img)
+        .subscribe(
+            new Consumer<Object>() {
+              @Override
+              public void accept(Object o) throws Exception {
+                //                Toast.makeText(MainActivity.this, "绘制" + o.toString(),
+                // Toast.LENGTH_LONG).show();
+                //                  Log.e(TAG,"绘制");
+              }
+            });
+    //
+    /* 拖拽监听 ???? */
+    RxView.drags(img)
+        .subscribe(
+            new Consumer<DragEvent>() {
+              @Override
+              public void accept(DragEvent dragEvent) throws Exception {
+                Toast.makeText(MainActivity.this, "被拖拽了" + dragEvent.toString(), Toast.LENGTH_LONG)
+                    .show();
+                Log.e(TAG, "被拖拽了" + dragEvent.toString());
+              }
+            });
+
+    // 滑动时触发
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      RxView.scrollChangeEvents(img)
+          .subscribe(
+              new Consumer<ViewScrollChangeEvent>() {
+                @Override
+                public void accept(ViewScrollChangeEvent viewScrollChangeEvent) throws Exception {
+                  Log.e(TAG, "被滑动了" + viewScrollChangeEvent.toString());
+                }
+              });
+    }
 
     // 直接导致空指针
     //    Observable.just(null);
-    flatmap();
+    //    flatmap();
+
+    Observable.just(1)
+        .map(
+            new Function<Integer, String>() {
+              @Override
+              public String apply(Integer integer) throws Exception {
+                return null;
+              }
+            })
+        .subscribe();
   }
 
   private static void flatmap() {
@@ -75,6 +154,31 @@ public class MainActivity extends AppCompatActivity {
                 });
   }
 
-
-
+  private void concat() {
+    Observable.create(
+            new ObservableOnSubscribe<Integer>() {
+              @Override
+              public void subscribe(ObservableEmitter<Integer> emitter) throws Exception {
+                for (int i = 0; i < 10; i++) {
+                  System.out.println("1111" + i);
+                }
+              }
+            })
+        .subscribeOn(Schedulers.io())
+        .concatWith(
+            Observable.create(
+                new ObservableOnSubscribe<Integer>() {
+                  @Override
+                  public void subscribe(ObservableEmitter<Integer> emitter) throws Exception {
+                    for (int i = 0; i < 10; i++) {
+                      System.out.println("2222" + i);
+                    }
+                  }
+                }))
+        .subscribe(
+            new Consumer<Integer>() {
+              @Override
+              public void accept(Integer integer) throws Exception {}
+            });
+  }
 }
