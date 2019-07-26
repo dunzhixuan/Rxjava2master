@@ -12,8 +12,8 @@ import io.reactivex.subjects.ReplaySubject;
 public class Subject {
 
   public static void main(String[] args) {
-    //    asyncSubject();
-    //    behaviorSubject();
+//        asyncSubject();
+//        behaviorSubject();
     //    replaySubject();
     publishSubject();
   }

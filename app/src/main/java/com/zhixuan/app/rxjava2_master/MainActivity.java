@@ -11,18 +11,27 @@ import android.widget.Toast;
 import com.jakewharton.rxbinding2.view.RxView;
 import com.jakewharton.rxbinding2.view.ViewScrollChangeEvent;
 
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import io.reactivex.BackpressureStrategy;
+import io.reactivex.Flowable;
+import io.reactivex.Notification;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.ObservableSource;
+import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
+import io.reactivex.functions.LongConsumer;
 import io.reactivex.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
@@ -36,6 +45,8 @@ public class MainActivity extends AppCompatActivity {
     setContentView(R.layout.activity_main);
     img = findViewById(R.id.img);
 
+    intervalBackPressure2();
+    //    IO();
     /* 防抖点击监听*/
     RxView.clicks(img)
         .throttleFirst(2, TimeUnit.SECONDS)
@@ -101,15 +112,15 @@ public class MainActivity extends AppCompatActivity {
     //    Observable.just(null);
     //    flatmap();
 
-    Observable.just(1)
-        .map(
-            new Function<Integer, String>() {
-              @Override
-              public String apply(Integer integer) throws Exception {
-                return null;
-              }
-            })
-        .subscribe();
+    //    Observable.just(1)
+    //        .map(
+    //            new Function<Integer, String>() {
+    //              @Override
+    //              public String apply(Integer integer) throws Exception {
+    //                return null;
+    //              }
+    //            })
+    //        .subscribe();
   }
 
   private static void flatmap() {
@@ -180,5 +191,160 @@ public class MainActivity extends AppCompatActivity {
               @Override
               public void accept(Integer integer) throws Exception {}
             });
+  }
+
+  private void IO() {
+    // TODO 切换线程
+    Observable.interval(1, TimeUnit.SECONDS)
+        .take(5)
+        .subscribeOn(Schedulers.io())
+        .subscribe(
+            new Consumer<Long>() {
+              @Override
+              public void accept(Long aLong) throws Exception {
+                System.out.println("TBG 当前线程：" + Thread.currentThread().getName());
+              }
+            });
+  }
+
+  static Subscription subscription = null;
+
+  private void intervalBackPressure() {
+    //      Observable.interval(1,TimeUnit.MICROSECONDS);
+    //    Flowable<Long> flowable =
+    Flowable.interval(1, TimeUnit.MICROSECONDS)
+        .doOnRequest(
+            new LongConsumer() {
+              @Override
+              public void accept(long t) throws Exception {
+                Log.e("TBG", "doOnRequest");
+              }
+            })
+        .subscribeOn(Schedulers.io())
+        .doOnSubscribe(
+            new Consumer<Subscription>() {
+              @Override
+              public void accept(Subscription subscription) throws Exception {
+                Log.e("TBG", "doOnSubscribe");
+              }
+            })
+        .observeOn(AndroidSchedulers.mainThread())
+        .doOnNext(
+            new Consumer<Long>() {
+              @Override
+              public void accept(Long aLong) throws Exception {
+                Log.e("TBG", "doOnNext");
+              }
+            })
+        .doOnTerminate(
+            new Action() {
+              @Override
+              public void run() throws Exception {
+                Log.e("TBG", "doOnTerminate");
+              }
+            })
+        .doOnEach(
+            new Consumer<Notification<Long>>() {
+              @Override
+              public void accept(Notification<Long> longNotification) throws Exception {
+                Log.e("TBG", "doOnEach");
+              }
+            })
+        .doOnComplete(
+            new Action() {
+              @Override
+              public void run() throws Exception {
+                Log.e("TBG", "doOnComplete");
+              }
+            })
+        .subscribe(
+            new Subscriber<Long>() {
+              @Override
+              public void onSubscribe(Subscription s) {
+                subscription = s;
+                subscription.request(1);
+              }
+
+              @Override
+              public void onNext(Long l) {
+                Log.e("TBG", l + "");
+                try {
+                  Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                  e.printStackTrace();
+                }
+                subscription.request(1);
+              }
+
+              @Override
+              public void onError(Throwable t) {
+                Log.e("TBG", "onError:" + t.toString());
+              }
+
+              @Override
+              public void onComplete() {
+                Log.e("TBG", "onComplete");
+              }
+            });
+
+    //      Observable<Long> observable2 = Observable.interval(1, TimeUnit.MILLISECONDS);
+    //
+    //      observable2
+    //              .subscribeOn(Schedulers.io())
+    //              .observeOn(AndroidSchedulers.mainThread())
+    //              .subscribe(new Observer<Long>() {
+    //                  @Override
+    //                  public void onSubscribe(Disposable d) {
+    //                  }
+    //
+    //                  @Override
+    //                  public void onNext(Long aLong) {
+    //                  }
+    //
+    //                  @Override
+    //                  public void onError(Throwable e) {
+    //
+    //                  }
+    //
+    //                  @Override
+    //                  public void onComplete() {
+    //
+    //                  }
+    //              });
+  }
+
+  private static void intervalBackPressure2() {
+
+    Flowable<Long> flowable =
+        Flowable.interval(1, TimeUnit.MILLISECONDS, Schedulers.trampoline()).take(225);
+
+    flowable
+        .observeOn(Schedulers.newThread())
+        .subscribe(
+            new Subscriber<Long>() {
+
+              @Override
+              public void onSubscribe(Subscription s) {
+                subscription = s;
+                subscription.request(100);
+              }
+
+              @Override
+              public void onNext(Long aLong) {
+                System.out.println(aLong);
+                  Log.e("TBG", "" + aLong);
+              }
+
+              @Override
+              public void onError(Throwable t) {
+                Log.e("TBG", "" + t.toString());
+              }
+
+              @Override
+              public void onComplete() {
+                Log.e("TBG", "onComplete");
+              }
+            });
+
   }
 }

@@ -33,6 +33,9 @@ public class Repeat {
     disposable.isDisposed();
   }
 
+  /*
+  * 让订阅者多次订阅，如:第一次订阅1-5 间隔6秒后又会重新订阅一次
+  * */
   private static void repeatWhen() {
     Observable.range(1, 5)
         .repeatWhen(new Function<Observable<Object>, ObservableSource<?>>() {
